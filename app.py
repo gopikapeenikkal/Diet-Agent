@@ -7,12 +7,15 @@ from phi.embedder.google import GeminiEmbedder
 from dotenv import load_dotenv
 from train import SYSTEM_PROMPT,INSTRUCTIONS
 from phi.utils.pprint import pprint_run_response
+from pydantic import BaseModel
+from typing import List
 
 # Load the environment variables
 load_dotenv()
 
 # Get the Google API key from the environment variables
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY') 
+
 
 # Creating the agent           
 def dietplan_agent(): 
@@ -27,6 +30,46 @@ def dietplan_agent():
                         dimensions=768,
                     )),)
         
+        #DIET PLAN RESPONSE STRUCTURE
+        class Meal(BaseModel):
+            name: str
+            ingredients: List[str]
+            calories: int
+            instructions: str
+            
+        class MealTime(BaseModel):
+            breakfast: List[Meal]
+            lunch: List[Meal]
+            dinner: List[Meal]
+            snacks: List[Meal]
+        
+        class NutritionalInfo(BaseModel):
+            daily_caloric_requirements: str
+            meal_structure: str
+            ingredient_list: str
+                
+        class MealPlan(BaseModel):
+            meal_options: MealTime
+            meal_variety: str
+            meal_calories: int 
+            
+        class ImportantConsiderations(BaseModel):
+            hydration: str
+            portion_control: str
+            cooking_methods: str
+            avoid: str
+            activity: str
+            food_allergies: str
+            
+        class dietplan(BaseModel):
+            overall_goal: str
+            diet_type: str
+            daily_calorie_goal: str
+            nutritional_info: NutritionalInfo
+            meal_plan: MealPlan
+            important_considerations: ImportantConsiderations
+            disclaimer: str
+            
         return Agent(
             model = Gemini(id = "gemini-2.0-flash-exp"),
             knowledge = knowledge_base,
@@ -35,7 +78,8 @@ def dietplan_agent():
             markdown = True,
             description = SYSTEM_PROMPT,
             instruction = INSTRUCTIONS,
-            debug_mode = True,   
+            debug_mode = True,  
+            response_model = dietplan, 
         )
     except Exception as e:
         print(f'exception in dietplan_agent -->{e}')       
@@ -86,8 +130,6 @@ def instructions():
                 Health conditions: {health_condition}
                 Preferred meal type: {meal_type}  
                 
-                
-                
                Create a detailed diet plan considering the following points:
                - Daily Caloric Requirements: Calculate based on the individual's activity level, weight, and health condition and show the requied calory requirement.
                - Meal Plan: Design a meal plan that incorporates products from knowledge.
@@ -101,6 +143,7 @@ def instructions():
                 
                 Format the response in a clear, structured way using markdown.
                 """
+                
         # Call the dietplan_agent       
         diet_agent = dietplan_agent()
         
